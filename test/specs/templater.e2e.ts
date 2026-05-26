@@ -248,6 +248,7 @@ describe("Templater", () => {
         });
         try {
             await browser.executeObsidian(async ({ app }) => {
+                await app.vault.createFolder("notes");
                 await app.vault.create("notes/new-note.md", "");
             });
             await WorkspacePage.waitForAllTemplatesExecuted();
