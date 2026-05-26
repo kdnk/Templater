@@ -57,6 +57,77 @@ describe("Templater", () => {
         });
     });
 
+    it("processes today's daily note on layout ready even when no active file is available", async () => {
+        await resetVault("test/vault", {
+            "Daily Notes/2026-05-26.md": '<% tp.date.now("YYYY-MM-DD") %>',
+        });
+
+        const result = await browser.executeObsidian(async ({ app, plugins }) => {
+            const plugin = plugins.templaterObsidian;
+            const dailyFile = app.vault.getFileByPath("Daily Notes/2026-05-26.md");
+            if (!dailyFile) {
+                throw new Error("Daily note file not found");
+            }
+
+            const originalTriggerOnFileCreation =
+                plugin.settings.trigger_on_file_creation;
+            const originalGetConfig = app.vault.getConfig.bind(app.vault);
+            const originalGetEnabledPluginById =
+                app.internalPlugins.getEnabledPluginById.bind(
+                    app.internalPlugins,
+                );
+            const originalGetActiveFile = app.workspace.getActiveFile.bind(
+                app.workspace,
+            );
+            const originalActiveEditor = app.workspace.activeEditor;
+            const originalUpdateTrigger =
+                plugin.event_handler.update_trigger_file_on_creation;
+
+            plugin.settings.trigger_on_file_creation = true;
+            app.vault.getConfig = ((key: string) => {
+                if (key === "openBehavior") {
+                    return "daily";
+                }
+                return originalGetConfig(key);
+            }) as typeof app.vault.getConfig;
+            app.internalPlugins.getEnabledPluginById = ((id: string) => {
+                if (id === "daily-notes") {
+                    return {
+                        options: {
+                            folder: "Daily Notes",
+                            format: "YYYY-MM-DD",
+                        },
+                    };
+                }
+                return originalGetEnabledPluginById(id);
+            }) as typeof app.internalPlugins.getEnabledPluginById;
+            app.workspace.getActiveFile = (() => null) as typeof app.workspace.getActiveFile;
+            app.workspace.activeEditor = null;
+            plugin.event_handler.update_trigger_file_on_creation = () => {};
+
+            try {
+                await (
+                    plugin.event_handler as unknown as {
+                        handle_layout_ready(): Promise<void>;
+                    }
+                ).handle_layout_ready();
+                return app.vault.read(dailyFile);
+            } finally {
+                plugin.settings.trigger_on_file_creation =
+                    originalTriggerOnFileCreation;
+                app.vault.getConfig = originalGetConfig;
+                app.internalPlugins.getEnabledPluginById =
+                    originalGetEnabledPluginById;
+                app.workspace.getActiveFile = originalGetActiveFile;
+                app.workspace.activeEditor = originalActiveEditor;
+                plugin.event_handler.update_trigger_file_on_creation =
+                    originalUpdateTrigger;
+            }
+        });
+
+        expect(result).toBe("2026-05-26");
+    });
+
     it("append_template_to_active_file shows properties in live preview", async () => {
         await resetVault("test/vault", {
             "templates/template.md": "---\nkey: value\n---\nText",

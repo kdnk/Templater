@@ -54,12 +54,14 @@ export default class EventHandler {
                     const daily_note_path = normalizePath(
                         `${folder}/${moment().format(format)}.md`,
                     );
-                    const active_file = get_active_file(this.plugin.app);
-                    if (active_file?.path === daily_note_path) {
+                    const daily_note_file =
+                        get_active_file(this.plugin.app) ??
+                        this.plugin.app.vault.getFileByPath(daily_note_path);
+                    if (daily_note_file?.path === daily_note_path) {
                         await Templater.on_file_creation(
                             this.templater,
                             this.plugin.app,
-                            active_file,
+                            daily_note_file,
                         );
                     }
                 }
