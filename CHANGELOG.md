@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.1](https://github.com/kdnk/Templater/compare/3.1.0...3.1.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **event-handler:** handle daily note fallback without an active file ([a45c05a](https://github.com/kdnk/Templater/commit/a45c05ae2fcc3b559d18c4fba716179ebbab181a)), closes [#1689](https://github.com/kdnk/Templater/issues/1689)
+
 ## [3.1.0](https://github.com/kdnk/Templater/compare/3.0.0...3.1.0) (2026-05-26)
 
 ## 3.0.0 (2026-05-26)
