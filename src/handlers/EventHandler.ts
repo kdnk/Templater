@@ -23,35 +23,48 @@ export default class EventHandler {
     ) {}
 
     async setup(): Promise<void> {
-        this.plugin.app.workspace.onLayoutReady(async () => {
-            if (this.settings.trigger_on_file_creation) {
-                const open_behavior =
-                    this.plugin.app.vault.getConfig("openBehavior");
-                if (open_behavior === "daily") {
-                    const daily_notes_plugin =
-                        this.plugin.app.internalPlugins.getEnabledPluginById(
-                            "daily-notes",
+        if (Array.isArray(this.plugin.app.workspace.onLayoutReadyCallbacks)) {
+            this.plugin.app.workspace.onLayoutReadyCallbacks.unshift({
+                pluginId: this.plugin.manifest.id,
+                callback: () => {
+                    void this.handle_layout_ready();
+                },
+            });
+        } else {
+            this.plugin.app.workspace.onLayoutReady(() => {
+                void this.handle_layout_ready();
+            });
+        }
+        await this.update_syntax_highlighting();
+        this.update_file_menu();
+    }
+
+    private async handle_layout_ready(): Promise<void> {
+        this.update_trigger_file_on_creation();
+
+        if (this.settings.trigger_on_file_creation) {
+            const open_behavior = this.plugin.app.vault.getConfig("openBehavior");
+            if (open_behavior === "daily") {
+                const daily_notes_plugin =
+                    this.plugin.app.internalPlugins.getEnabledPluginById(
+                        "daily-notes",
+                    );
+                if (daily_notes_plugin) {
+                    const { folder, format } = daily_notes_plugin.options;
+                    const daily_note_path = normalizePath(
+                        `${folder}/${moment().format(format)}.md`,
+                    );
+                    const active_file = get_active_file(this.plugin.app);
+                    if (active_file?.path === daily_note_path) {
+                        await Templater.on_file_creation(
+                            this.templater,
+                            this.plugin.app,
+                            active_file,
                         );
-                    if (daily_notes_plugin) {
-                        const { folder, format } = daily_notes_plugin.options;
-                        const daily_note_path = normalizePath(
-                            `${folder}/${moment().format(format)}.md`,
-                        );
-                        const active_file = get_active_file(this.plugin.app);
-                        if (active_file?.path === daily_note_path) {
-                            await Templater.on_file_creation(
-                                this.templater,
-                                this.plugin.app,
-                                active_file,
-                            );
-                        }
                     }
                 }
             }
-            this.update_trigger_file_on_creation();
-        });
-        await this.update_syntax_highlighting();
-        this.update_file_menu();
+        }
     }
 
     async update_syntax_highlighting(): Promise<void> {

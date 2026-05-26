@@ -8,6 +8,55 @@ import ActiveMarkdownViewPage from "../page-objects/ActiveMarkdownView.page";
 import { resetVault } from "../utils/reset-vault";
 
 describe("Templater", () => {
+    it("registers file creation trigger before layout-ready callbacks when available", async () => {
+        const result = await browser.executeObsidian(async ({ app, plugins }) => {
+            const plugin = plugins.templaterObsidian;
+            const callbacks: { pluginId: string; callback: () => void }[] = [];
+            let onLayoutReadyCalled = false;
+
+            const originalCallbacks = app.workspace.onLayoutReadyCallbacks;
+            const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
+                app.workspace,
+            );
+            const originalUpdateSyntax =
+                plugin.event_handler.update_syntax_highlighting;
+            const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
+            const originalUpdateTrigger =
+                plugin.event_handler.update_trigger_file_on_creation;
+
+            app.workspace.onLayoutReadyCallbacks = callbacks;
+            app.workspace.onLayoutReady = (() => {
+                onLayoutReadyCalled = true;
+            }) as typeof app.workspace.onLayoutReady;
+            plugin.event_handler.update_syntax_highlighting = async () => {};
+            plugin.event_handler.update_file_menu = () => {};
+            plugin.event_handler.update_trigger_file_on_creation = () => {};
+
+            try {
+                await plugin.event_handler.setup();
+                return {
+                    callbacksLength: callbacks.length,
+                    firstPluginId: callbacks[0]?.pluginId ?? null,
+                    onLayoutReadyCalled,
+                };
+            } finally {
+                app.workspace.onLayoutReadyCallbacks = originalCallbacks;
+                app.workspace.onLayoutReady = originalOnLayoutReady;
+                plugin.event_handler.update_syntax_highlighting =
+                    originalUpdateSyntax;
+                plugin.event_handler.update_file_menu = originalUpdateFileMenu;
+                plugin.event_handler.update_trigger_file_on_creation =
+                    originalUpdateTrigger;
+            }
+        });
+
+        expect(result).toEqual({
+            callbacksLength: 1,
+            firstPluginId: "templater-obsidian",
+            onLayoutReadyCalled: false,
+        });
+    });
+
     it("append_template_to_active_file shows properties in live preview", async () => {
         await resetVault("test/vault", {
             "templates/template.md": "---\nkey: value\n---\nText",
