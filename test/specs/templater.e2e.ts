@@ -1,4 +1,5 @@
 import { browser } from "@wdio/globals";
+import moment from "moment";
 import { obsidianPage } from "wdio-obsidian-service";
 import OpenInsertTemplateModalPage from "../page-objects/OpenInsertTemplateModal.page";
 import WorkspacePage from "../page-objects/Workspace.page";
@@ -57,14 +58,73 @@ describe("Templater", () => {
         });
     });
 
-    it("processes today's daily note on layout ready even when no active file is available", async () => {
-        await resetVault("test/vault", {
-            "Daily Notes/2026-05-26.md": '<% tp.date.now("YYYY-MM-DD") %>',
-        });
-
+    it("registers file creation trigger immediately when early layout-ready callbacks are unavailable", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
-            const dailyFile = app.vault.getFileByPath("Daily Notes/2026-05-26.md");
+            let createListenerRegistered = false;
+            let layoutReadyCallback: (() => void) | null = null;
+
+            const originalCallbacks = app.workspace.onLayoutReadyCallbacks;
+            const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
+                app.workspace,
+            );
+            const originalVaultOn = app.vault.on.bind(app.vault);
+            const originalUpdateSyntax =
+                plugin.event_handler.update_syntax_highlighting;
+            const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
+            const originalRegisterEvent = plugin.registerEvent.bind(plugin);
+            const originalTriggerOnFileCreation =
+                plugin.settings.trigger_on_file_creation;
+
+            app.workspace.onLayoutReadyCallbacks = undefined;
+            app.workspace.onLayoutReady = ((callback: () => void) => {
+                layoutReadyCallback = callback;
+            }) as typeof app.workspace.onLayoutReady;
+            app.vault.on = ((name: string, callback: unknown) => {
+                if (name === "create") {
+                    createListenerRegistered = true;
+                }
+                return originalVaultOn(name as "create", callback as never);
+            }) as typeof app.vault.on;
+            plugin.event_handler.update_syntax_highlighting = async () => {};
+            plugin.event_handler.update_file_menu = () => {};
+            plugin.registerEvent = (() => {}) as typeof plugin.registerEvent;
+            plugin.settings.trigger_on_file_creation = true;
+
+            try {
+                await plugin.event_handler.setup();
+                return {
+                    createListenerRegistered,
+                    hasDeferredLayoutReadyCallback: layoutReadyCallback !== null,
+                };
+            } finally {
+                app.workspace.onLayoutReadyCallbacks = originalCallbacks;
+                app.workspace.onLayoutReady = originalOnLayoutReady;
+                app.vault.on = originalVaultOn;
+                plugin.event_handler.update_syntax_highlighting =
+                    originalUpdateSyntax;
+                plugin.event_handler.update_file_menu = originalUpdateFileMenu;
+                plugin.registerEvent = originalRegisterEvent;
+                plugin.settings.trigger_on_file_creation =
+                    originalTriggerOnFileCreation;
+            }
+        });
+
+        expect(result).toEqual({
+            createListenerRegistered: true,
+            hasDeferredLayoutReadyCallback: true,
+        });
+    });
+
+    it("processes today's daily note on layout ready even when no active file is available", async () => {
+        const today = moment().format("YYYY-MM-DD");
+        await resetVault("test/vault", {
+            [`Daily Notes/${today}.md`]: '<% tp.date.now("YYYY-MM-DD") %>',
+        });
+
+        const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
+            const plugin = plugins.templaterObsidian;
+            const dailyFile = app.vault.getFileByPath(`Daily Notes/${currentDay}.md`);
             if (!dailyFile) {
                 throw new Error("Daily note file not found");
             }
@@ -123,9 +183,9 @@ describe("Templater", () => {
                 plugin.event_handler.update_trigger_file_on_creation =
                     originalUpdateTrigger;
             }
-        });
+        }, today);
 
-        expect(result).toBe("2026-05-26");
+        expect(result).toBe(today);
     });
 
     it("append_template_to_active_file shows properties in live preview", async () => {
