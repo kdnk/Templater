@@ -48,6 +48,7 @@ export class Templater {
     public functions_generator: FunctionsGenerator;
     public current_functions_object: Record<string, unknown>;
     public files_with_pending_templates: Set<string>;
+    public files_with_pending_file_creation: Set<string>;
 
     constructor(private plugin: TemplaterPlugin) {
         this.functions_generator = new FunctionsGenerator(this.plugin);
@@ -56,6 +57,7 @@ export class Templater {
 
     async setup(): Promise<void> {
         this.files_with_pending_templates = new Set();
+        this.files_with_pending_file_creation = new Set();
         await this.parser.init();
         await this.functions_generator.init();
         this.plugin.registerMarkdownPostProcessor((el, ctx) =>
@@ -554,73 +556,84 @@ export class Templater {
             }
         }
 
-        // TODO: find a better way to do this
-        // Currently, I have to wait for the note extractor plugin to add the file content before replacing
-        await delay(300);
-
-        // Avoids template replacement when creating file from template without content before delay
-        if (templater.files_with_pending_templates.has(file.path)) {
+        if (templater.files_with_pending_file_creation.has(file.path)) {
             return;
         }
+        templater.files_with_pending_file_creation.add(file.path);
 
-        const file_content = await app.vault.read(file);
-        const frontmatter_info = getFrontMatterInfo(file_content);
-        const content_size =
-            file_content.length - frontmatter_info.contentStart;
+        try {
+            // TODO: find a better way to do this
+            // Currently, I have to wait for the note extractor plugin to add the file content before replacing
+            await delay(300);
 
-        if (
-            content_size == 0 &&
-            templater.plugin.settings.enable_folder_templates
-        ) {
-            if (!(file.parent instanceof TFolder)) {
+            // Avoids template replacement when creating file from template without content before delay
+            if (templater.files_with_pending_templates.has(file.path)) {
                 return;
             }
-            const folder_template_match =
-                templater.get_new_file_template_for_folder(file.parent);
-            if (!folder_template_match) {
-                return;
-            }
-            const template_file: TFile = await errorWrapper(
-                async (): Promise<TFile> => {
-                    return resolve_tfile(app, folder_template_match);
-                },
-                `Couldn't find template ${folder_template_match}`,
-            );
-            // errorWrapper failed
-            if (template_file == null) {
-                return;
-            }
-            await templater.write_template_to_file(template_file, file);
-        } else if (
-            content_size == 0 &&
-            templater.plugin.settings.enable_file_templates
-        ) {
-            const file_template_match =
-                templater.get_new_file_template_for_file(file);
-            if (!file_template_match) {
-                return;
-            }
-            const template_file: TFile = await errorWrapper(
-                async (): Promise<TFile> => {
-                    return resolve_tfile(app, file_template_match);
-                },
-                `Couldn't find template ${file_template_match}`,
-            );
-            // errorWrapper failed
-            if (template_file == null) {
-                return;
-            }
-            await templater.write_template_to_file(template_file, file);
-        } else {
-            const SIZE_LIMIT = 100_000;
-            if (file.stat.size <= SIZE_LIMIT) {
-                //https://github.com/SilentVoid13/Templater/issues/873
-                await templater.overwrite_file_commands(file);
-            } else {
-                console.debug(
-                    `Templater skipped parsing ${file.path} because file size exceeds ${SIZE_LIMIT}`,
+
+            const file_content = await app.vault.read(file);
+            const frontmatter_info = getFrontMatterInfo(file_content);
+            const content_size =
+                file_content.length - frontmatter_info.contentStart;
+
+            if (
+                content_size == 0 &&
+                templater.plugin.settings.enable_folder_templates
+            ) {
+                if (!(file.parent instanceof TFolder)) {
+                    return;
+                }
+                const folder_template_match =
+                    templater.get_new_file_template_for_folder(file.parent);
+                if (!folder_template_match) {
+                    return;
+                }
+                const template_file: TFile = await errorWrapper(
+                    async (): Promise<TFile> => {
+                        return resolve_tfile(app, folder_template_match);
+                    },
+                    `Couldn't find template ${folder_template_match}`,
                 );
+                // errorWrapper failed
+                if (template_file == null) {
+                    return;
+                }
+                await templater.write_template_to_file(template_file, file);
+            } else {
+                if (
+                    content_size == 0 &&
+                    templater.plugin.settings.enable_file_templates
+                ) {
+                    const file_template_match =
+                        templater.get_new_file_template_for_file(file);
+                    if (!file_template_match) {
+                        return;
+                    }
+                    const template_file: TFile = await errorWrapper(
+                        async (): Promise<TFile> => {
+                            return resolve_tfile(app, file_template_match);
+                        },
+                        `Couldn't find template ${file_template_match}`,
+                    );
+                    // errorWrapper failed
+                    if (template_file == null) {
+                        return;
+                    }
+                    await templater.write_template_to_file(template_file, file);
+                } else {
+                    const SIZE_LIMIT = 100_000;
+                    if (file.stat.size <= SIZE_LIMIT) {
+                        //https://github.com/SilentVoid13/Templater/issues/873
+                        await templater.overwrite_file_commands(file);
+                    } else {
+                        console.debug(
+                            `Templater skipped parsing ${file.path} because file size exceeds ${SIZE_LIMIT}`,
+                        );
+                    }
+                }
             }
+        } finally {
+            templater.files_with_pending_file_creation.delete(file.path);
         }
     }
 

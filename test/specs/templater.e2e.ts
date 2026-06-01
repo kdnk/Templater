@@ -58,6 +58,67 @@ describe("Templater", () => {
         });
     });
 
+    it("replaces stale layout-ready callbacks for this plugin", async () => {
+        const result = await browser.executeObsidian(async ({ app, plugins }) => {
+            const plugin = plugins.templaterObsidian;
+            const otherPluginCallback = () => {};
+            const callbacks: { pluginId: string; callback: () => void }[] = [
+                {
+                    pluginId: "templater-obsidian",
+                    callback: () => {},
+                },
+                {
+                    pluginId: "other-plugin",
+                    callback: otherPluginCallback,
+                },
+                {
+                    pluginId: "templater-obsidian",
+                    callback: () => {},
+                },
+            ];
+
+            const originalCallbacks = app.workspace.onLayoutReadyCallbacks;
+            const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
+                app.workspace,
+            );
+            const originalUpdateSyntax =
+                plugin.event_handler.update_syntax_highlighting;
+            const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
+            const originalUpdateTrigger =
+                plugin.event_handler.update_trigger_file_on_creation;
+
+            app.workspace.onLayoutReadyCallbacks = callbacks;
+            app.workspace.onLayoutReady = (() => {}) as typeof app.workspace.onLayoutReady;
+            plugin.event_handler.update_syntax_highlighting = async () => {};
+            plugin.event_handler.update_file_menu = () => {};
+            plugin.event_handler.update_trigger_file_on_creation = () => {};
+
+            try {
+                await plugin.event_handler.setup();
+                return {
+                    pluginIds: callbacks.map((callback) => callback.pluginId),
+                    otherPluginPreserved:
+                        callbacks.find(
+                            (callback) => callback.pluginId === "other-plugin",
+                        )?.callback === otherPluginCallback,
+                };
+            } finally {
+                app.workspace.onLayoutReadyCallbacks = originalCallbacks;
+                app.workspace.onLayoutReady = originalOnLayoutReady;
+                plugin.event_handler.update_syntax_highlighting =
+                    originalUpdateSyntax;
+                plugin.event_handler.update_file_menu = originalUpdateFileMenu;
+                plugin.event_handler.update_trigger_file_on_creation =
+                    originalUpdateTrigger;
+            }
+        });
+
+        expect(result).toEqual({
+            pluginIds: ["templater-obsidian", "other-plugin"],
+            otherPluginPreserved: true,
+        });
+    });
+
     it("registers file creation trigger immediately when early layout-ready callbacks are unavailable", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
@@ -118,6 +179,10 @@ describe("Templater", () => {
 
     it("processes today's daily note on layout ready even when no active file is available", async () => {
         const today = moment().format("YYYY-MM-DD");
+        await browser.executeObsidian(async ({ plugins }) => {
+            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
+            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
+        });
         await resetVault("test/vault", {
             [`Daily Notes/${today}.md`]: '<% tp.date.now("YYYY-MM-DD") %>',
         });
@@ -186,6 +251,53 @@ describe("Templater", () => {
         }, today);
 
         expect(result).toBe(today);
+    });
+
+    it("does not process the same created file concurrently", async () => {
+        await browser.executeObsidian(async ({ plugins }) => {
+            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
+            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
+        });
+        await resetVault("test/vault", {
+            "notes/new-note.md": '<% tp.date.now("YYYY-MM-DD") %>',
+        });
+
+        const overwriteCount = await browser.executeObsidian(async ({ app, plugins }) => {
+            const plugin = plugins.templaterObsidian;
+            const file = app.vault.getFileByPath("notes/new-note.md");
+            if (!file) {
+                throw new Error("Test note not found");
+            }
+
+            const originalOverwrite =
+                plugin.templater.overwrite_file_commands.bind(plugin.templater);
+            let calls = 0;
+
+            plugin.templater.overwrite_file_commands = (async (...args) => {
+                calls += 1;
+                return originalOverwrite(...args);
+            }) as typeof plugin.templater.overwrite_file_commands;
+
+            const TemplaterClass = plugin.templater.constructor as unknown as {
+                on_file_creation(
+                    templater: unknown,
+                    app: unknown,
+                    file: unknown,
+                ): Promise<void>;
+            };
+
+            try {
+                await Promise.all([
+                    TemplaterClass.on_file_creation(plugin.templater, app, file),
+                    TemplaterClass.on_file_creation(plugin.templater, app, file),
+                ]);
+                return calls;
+            } finally {
+                plugin.templater.overwrite_file_commands = originalOverwrite;
+            }
+        });
+
+        expect(overwriteCount).toBe(1);
     });
 
     it("append_template_to_active_file shows properties in live preview", async () => {
