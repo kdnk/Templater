@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.3](https://github.com/kdnk/Templater/compare/3.1.2...3.1.3) (2026-06-01)
+
+
+### Bug Fixes
+
+* **event-handler:** prevent duplicate startup processing ([5367081](https://github.com/kdnk/Templater/commit/536708170b2ec5cfa127fda869baef1e1c447faf))
+
 ### [3.1.2](https://github.com/kdnk/Templater/compare/3.1.1...3.1.2) (2026-06-01)
 
 
