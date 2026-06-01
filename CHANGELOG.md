@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.2](https://github.com/kdnk/Templater/compare/3.1.1...3.1.2) (2026-06-01)
+
+
+### Bug Fixes
+
+* **event-handler:** register file creation trigger during setup ([b2eaa10](https://github.com/kdnk/Templater/commit/b2eaa1096230aec3af8e52b6d30c9ee30b296ac8))
+
 ### [3.1.1](https://github.com/kdnk/Templater/compare/3.1.0...3.1.1) (2026-05-26)
 
 
