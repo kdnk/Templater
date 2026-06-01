@@ -23,6 +23,8 @@ export default class EventHandler {
     ) {}
 
     async setup(): Promise<void> {
+        this.update_trigger_file_on_creation();
+
         if (Array.isArray(this.plugin.app.workspace.onLayoutReadyCallbacks)) {
             this.plugin.app.workspace.onLayoutReadyCallbacks.unshift({
                 pluginId: this.plugin.manifest.id,
@@ -84,6 +86,9 @@ export default class EventHandler {
 
     update_trigger_file_on_creation(): void {
         if (this.settings.trigger_on_file_creation) {
+            if (this.trigger_on_file_creation_event) {
+                return;
+            }
             this.trigger_on_file_creation_event = this.plugin.app.vault.on(
                 "create",
                 (file: TAbstractFile) =>
