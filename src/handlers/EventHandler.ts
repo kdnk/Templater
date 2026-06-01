@@ -26,6 +26,7 @@ export default class EventHandler {
         this.update_trigger_file_on_creation();
 
         if (Array.isArray(this.plugin.app.workspace.onLayoutReadyCallbacks)) {
+            this.remove_layout_ready_callbacks();
             this.plugin.app.workspace.onLayoutReadyCallbacks.unshift({
                 pluginId: this.plugin.manifest.id,
                 callback: () => {
@@ -39,6 +40,19 @@ export default class EventHandler {
         }
         await this.update_syntax_highlighting();
         this.update_file_menu();
+    }
+
+    private remove_layout_ready_callbacks(): void {
+        const callbacks = this.plugin.app.workspace.onLayoutReadyCallbacks;
+        if (!Array.isArray(callbacks)) {
+            return;
+        }
+
+        for (let i = callbacks.length - 1; i >= 0; i--) {
+            if (callbacks[i].pluginId === this.plugin.manifest.id) {
+                callbacks.splice(i, 1);
+            }
+        }
     }
 
     private async handle_layout_ready(): Promise<void> {
