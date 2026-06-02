@@ -23,8 +23,6 @@ export default class EventHandler {
     ) {}
 
     async setup(): Promise<void> {
-        this.update_trigger_file_on_creation();
-
         if (Array.isArray(this.plugin.app.workspace.onLayoutReadyCallbacks)) {
             this.remove_layout_ready_callbacks();
             this.plugin.app.workspace.onLayoutReadyCallbacks.unshift({
