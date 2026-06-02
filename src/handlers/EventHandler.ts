@@ -71,8 +71,8 @@ export default class EventHandler {
                         `${folder}/${moment().format(format)}.md`,
                     );
                     const daily_note_file =
-                        get_active_file(this.plugin.app) ??
-                        this.plugin.app.vault.getFileByPath(daily_note_path);
+                        this.plugin.app.vault.getFileByPath(daily_note_path) ??
+                        get_active_file(this.plugin.app);
                     if (daily_note_file?.path === daily_note_path) {
                         await Templater.on_file_creation(
                             this.templater,

@@ -253,6 +253,86 @@ describe("Templater", () => {
         expect(result).toBe(today);
     });
 
+    it("processes today's daily note on layout ready using the daily note as target file", async () => {
+        const today = moment().format("YYYY-MM-DD");
+        const yesterday = moment().add(-1, "days").format("YYYY-MM-DD");
+        await browser.executeObsidian(async ({ plugins }) => {
+            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
+            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
+        });
+        await resetVault("test/vault", {
+            [`Daily Notes/${today}.md`]:
+                '<% tp.date.now("YYYY-MM-DD", -1, tp.file.title, "YYYY-MM-DD") %>',
+            "notes/active.md": "active note",
+        });
+
+        const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
+            const plugin = plugins.templaterObsidian;
+            const dailyFile = app.vault.getFileByPath(`Daily Notes/${currentDay}.md`);
+            const activeFile = app.vault.getFileByPath("notes/active.md");
+            if (!dailyFile || !activeFile) {
+                throw new Error("Test files not found");
+            }
+
+            const originalTriggerOnFileCreation =
+                plugin.settings.trigger_on_file_creation;
+            const originalGetConfig = app.vault.getConfig.bind(app.vault);
+            const originalGetEnabledPluginById =
+                app.internalPlugins.getEnabledPluginById.bind(
+                    app.internalPlugins,
+                );
+            const originalGetActiveFile = app.workspace.getActiveFile.bind(
+                app.workspace,
+            );
+            const originalActiveEditor = app.workspace.activeEditor;
+            const originalUpdateTrigger =
+                plugin.event_handler.update_trigger_file_on_creation;
+
+            plugin.settings.trigger_on_file_creation = true;
+            app.vault.getConfig = ((key: string) => {
+                if (key === "openBehavior") {
+                    return "daily";
+                }
+                return originalGetConfig(key);
+            }) as typeof app.vault.getConfig;
+            app.internalPlugins.getEnabledPluginById = ((id: string) => {
+                if (id === "daily-notes") {
+                    return {
+                        options: {
+                            folder: "Daily Notes",
+                            format: "YYYY-MM-DD",
+                        },
+                    };
+                }
+                return originalGetEnabledPluginById(id);
+            }) as typeof app.internalPlugins.getEnabledPluginById;
+            app.workspace.getActiveFile = (() => activeFile) as typeof app.workspace.getActiveFile;
+            app.workspace.activeEditor = null;
+            plugin.event_handler.update_trigger_file_on_creation = () => {};
+
+            try {
+                await (
+                    plugin.event_handler as unknown as {
+                        handle_layout_ready(): Promise<void>;
+                    }
+                ).handle_layout_ready();
+                return app.vault.read(dailyFile);
+            } finally {
+                plugin.settings.trigger_on_file_creation =
+                    originalTriggerOnFileCreation;
+                app.vault.getConfig = originalGetConfig;
+                app.internalPlugins.getEnabledPluginById =
+                    originalGetEnabledPluginById;
+                app.workspace.getActiveFile = originalGetActiveFile;
+                app.workspace.activeEditor = originalActiveEditor;
+                plugin.event_handler.update_trigger_file_on_creation =
+                    originalUpdateTrigger;
+            }
+        }, today);
+
+        expect(result).toBe(yesterday);
+    });
+
     it("does not process the same created file concurrently", async () => {
         await browser.executeObsidian(async ({ plugins }) => {
             plugins.templaterObsidian.settings.trigger_on_file_creation = false;
