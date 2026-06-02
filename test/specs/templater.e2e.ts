@@ -9,11 +9,12 @@ import ActiveMarkdownViewPage from "../page-objects/ActiveMarkdownView.page";
 import { resetVault } from "../utils/reset-vault";
 
 describe("Templater", () => {
-    it("registers file creation trigger before layout-ready callbacks when available", async () => {
+    it("defers file creation trigger until layout ready when early layout-ready callbacks are available", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
             const callbacks: { pluginId: string; callback: () => void }[] = [];
             let onLayoutReadyCalled = false;
+            let updateTriggerCalls = 0;
 
             const originalCallbacks = app.workspace.onLayoutReadyCallbacks;
             const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
@@ -31,7 +32,9 @@ describe("Templater", () => {
             }) as typeof app.workspace.onLayoutReady;
             plugin.event_handler.update_syntax_highlighting = async () => {};
             plugin.event_handler.update_file_menu = () => {};
-            plugin.event_handler.update_trigger_file_on_creation = () => {};
+            plugin.event_handler.update_trigger_file_on_creation = () => {
+                updateTriggerCalls++;
+            };
 
             try {
                 await plugin.event_handler.setup();
@@ -39,6 +42,7 @@ describe("Templater", () => {
                     callbacksLength: callbacks.length,
                     firstPluginId: callbacks[0]?.pluginId ?? null,
                     onLayoutReadyCalled,
+                    updateTriggerCalls,
                 };
             } finally {
                 app.workspace.onLayoutReadyCallbacks = originalCallbacks;
@@ -55,6 +59,7 @@ describe("Templater", () => {
             callbacksLength: 1,
             firstPluginId: "templater-obsidian",
             onLayoutReadyCalled: false,
+            updateTriggerCalls: 0,
         });
     });
 
@@ -119,7 +124,7 @@ describe("Templater", () => {
         });
     });
 
-    it("registers file creation trigger immediately when early layout-ready callbacks are unavailable", async () => {
+    it("defers file creation trigger until layout ready when early layout-ready callbacks are unavailable", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
             let createListenerRegistered = false;
@@ -172,7 +177,7 @@ describe("Templater", () => {
         });
 
         expect(result).toEqual({
-            createListenerRegistered: true,
+            createListenerRegistered: false,
             hasDeferredLayoutReadyCallback: true,
         });
     });
