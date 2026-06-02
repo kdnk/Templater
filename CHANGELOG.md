@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.4](https://github.com/kdnk/Templater/compare/3.1.3...3.1.4) (2026-06-02)
+
+
+### Bug Fixes
+
+* **event-handler:** prefer daily note during startup recovery ([569b94a](https://github.com/kdnk/Templater/commit/569b94a71468689a80b48776a6dcf6d815fe0c7e))
+
 ### [3.1.3](https://github.com/kdnk/Templater/compare/3.1.2...3.1.3) (2026-06-01)
 
 
