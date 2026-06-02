@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.5](https://github.com/kdnk/Templater/compare/3.1.4...3.1.5) (2026-06-02)
+
+
+### Bug Fixes
+
+* **event-handler:** defer file creation listener until layout ready ([ffd372f](https://github.com/kdnk/Templater/commit/ffd372fe2c6683f78acc26b2b72b761b7a178d83))
+
 ### [3.1.4](https://github.com/kdnk/Templater/compare/3.1.3...3.1.4) (2026-06-02)
 
 
