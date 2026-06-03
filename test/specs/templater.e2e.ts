@@ -9,12 +9,11 @@ import ActiveMarkdownViewPage from "../page-objects/ActiveMarkdownView.page";
 import { resetVault } from "../utils/reset-vault";
 
 describe("Templater", () => {
-    it("defers file creation trigger until layout ready when early layout-ready callbacks are available", async () => {
+    it("registers daily note processing as an early layout-ready callback when available", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
             const callbacks: { pluginId: string; callback: () => void }[] = [];
             let onLayoutReadyCalled = false;
-            let updateTriggerCalls = 0;
 
             const originalCallbacks = app.workspace.onLayoutReadyCallbacks;
             const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
@@ -23,8 +22,6 @@ describe("Templater", () => {
             const originalUpdateSyntax =
                 plugin.event_handler.update_syntax_highlighting;
             const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
-            const originalUpdateTrigger =
-                plugin.event_handler.update_trigger_file_on_creation;
 
             app.workspace.onLayoutReadyCallbacks = callbacks;
             app.workspace.onLayoutReady = (() => {
@@ -32,9 +29,6 @@ describe("Templater", () => {
             }) as typeof app.workspace.onLayoutReady;
             plugin.event_handler.update_syntax_highlighting = async () => {};
             plugin.event_handler.update_file_menu = () => {};
-            plugin.event_handler.update_trigger_file_on_creation = () => {
-                updateTriggerCalls++;
-            };
 
             try {
                 await plugin.event_handler.setup();
@@ -42,7 +36,6 @@ describe("Templater", () => {
                     callbacksLength: callbacks.length,
                     firstPluginId: callbacks[0]?.pluginId ?? null,
                     onLayoutReadyCalled,
-                    updateTriggerCalls,
                 };
             } finally {
                 app.workspace.onLayoutReadyCallbacks = originalCallbacks;
@@ -50,8 +43,6 @@ describe("Templater", () => {
                 plugin.event_handler.update_syntax_highlighting =
                     originalUpdateSyntax;
                 plugin.event_handler.update_file_menu = originalUpdateFileMenu;
-                plugin.event_handler.update_trigger_file_on_creation =
-                    originalUpdateTrigger;
             }
         });
 
@@ -59,7 +50,6 @@ describe("Templater", () => {
             callbacksLength: 1,
             firstPluginId: "templater-obsidian",
             onLayoutReadyCalled: false,
-            updateTriggerCalls: 0,
         });
     });
 
@@ -89,14 +79,11 @@ describe("Templater", () => {
             const originalUpdateSyntax =
                 plugin.event_handler.update_syntax_highlighting;
             const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
-            const originalUpdateTrigger =
-                plugin.event_handler.update_trigger_file_on_creation;
 
             app.workspace.onLayoutReadyCallbacks = callbacks;
             app.workspace.onLayoutReady = (() => {}) as typeof app.workspace.onLayoutReady;
             plugin.event_handler.update_syntax_highlighting = async () => {};
             plugin.event_handler.update_file_menu = () => {};
-            plugin.event_handler.update_trigger_file_on_creation = () => {};
 
             try {
                 await plugin.event_handler.setup();
@@ -113,8 +100,6 @@ describe("Templater", () => {
                 plugin.event_handler.update_syntax_highlighting =
                     originalUpdateSyntax;
                 plugin.event_handler.update_file_menu = originalUpdateFileMenu;
-                plugin.event_handler.update_trigger_file_on_creation =
-                    originalUpdateTrigger;
             }
         });
 
@@ -124,7 +109,7 @@ describe("Templater", () => {
         });
     });
 
-    it("defers file creation trigger until layout ready when early layout-ready callbacks are unavailable", async () => {
+    it("uses standard layout-ready registration when early callbacks are unavailable", async () => {
         const result = await browser.executeObsidian(async ({ app, plugins }) => {
             const plugin = plugins.templaterObsidian;
             let createListenerRegistered = false;
@@ -139,8 +124,6 @@ describe("Templater", () => {
                 plugin.event_handler.update_syntax_highlighting;
             const originalUpdateFileMenu = plugin.event_handler.update_file_menu;
             const originalRegisterEvent = plugin.registerEvent.bind(plugin);
-            const originalTriggerOnFileCreation =
-                plugin.settings.trigger_on_file_creation;
 
             app.workspace.onLayoutReadyCallbacks = undefined;
             app.workspace.onLayoutReady = ((callback: () => void) => {
@@ -155,7 +138,6 @@ describe("Templater", () => {
             plugin.event_handler.update_syntax_highlighting = async () => {};
             plugin.event_handler.update_file_menu = () => {};
             plugin.registerEvent = (() => {}) as typeof plugin.registerEvent;
-            plugin.settings.trigger_on_file_creation = true;
 
             try {
                 await plugin.event_handler.setup();
@@ -171,8 +153,6 @@ describe("Templater", () => {
                     originalUpdateSyntax;
                 plugin.event_handler.update_file_menu = originalUpdateFileMenu;
                 plugin.registerEvent = originalRegisterEvent;
-                plugin.settings.trigger_on_file_creation =
-                    originalTriggerOnFileCreation;
             }
         });
 
@@ -184,10 +164,6 @@ describe("Templater", () => {
 
     it("processes today's daily note template on layout ready even when no active file is available", async () => {
         const today = moment().format("YYYY-MM-DD");
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
-            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
-        });
         await resetVault("test/vault", {
             "templates/daily.md": '<% tp.date.now("YYYY-MM-DD") %>',
         });
@@ -213,8 +189,6 @@ describe("Templater", () => {
                 app.workspace,
             );
             const originalActiveEditor = app.workspace.activeEditor;
-            const originalUpdateTrigger =
-                plugin.event_handler.update_trigger_file_on_creation;
 
             plugin.settings.daily_note_template = "templates/daily.md";
             app.vault.getConfig = ((key: string) => {
@@ -236,7 +210,6 @@ describe("Templater", () => {
             }) as typeof app.internalPlugins.getEnabledPluginById;
             app.workspace.getActiveFile = (() => null) as typeof app.workspace.getActiveFile;
             app.workspace.activeEditor = null;
-            plugin.event_handler.update_trigger_file_on_creation = () => {};
 
             try {
                 await (
@@ -252,8 +225,6 @@ describe("Templater", () => {
                     originalGetEnabledPluginById;
                 app.workspace.getActiveFile = originalGetActiveFile;
                 app.workspace.activeEditor = originalActiveEditor;
-                plugin.event_handler.update_trigger_file_on_creation =
-                    originalUpdateTrigger;
             }
         }, today);
 
@@ -263,10 +234,6 @@ describe("Templater", () => {
     it("processes today's daily note template on layout ready using the daily note as target file", async () => {
         const today = moment().format("YYYY-MM-DD");
         const yesterday = moment().add(-1, "days").format("YYYY-MM-DD");
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
-            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
-        });
         await resetVault("test/vault", {
             "templates/daily.md": "<% tp.date.yesterday() %>",
             "notes/active.md": "active note",
@@ -294,8 +261,6 @@ describe("Templater", () => {
                 app.workspace,
             );
             const originalActiveEditor = app.workspace.activeEditor;
-            const originalUpdateTrigger =
-                plugin.event_handler.update_trigger_file_on_creation;
 
             plugin.settings.daily_note_template = "templates/daily.md";
             app.vault.getConfig = ((key: string) => {
@@ -317,7 +282,6 @@ describe("Templater", () => {
             }) as typeof app.internalPlugins.getEnabledPluginById;
             app.workspace.getActiveFile = (() => activeFile) as typeof app.workspace.getActiveFile;
             app.workspace.activeEditor = null;
-            plugin.event_handler.update_trigger_file_on_creation = () => {};
 
             try {
                 await (
@@ -333,59 +297,10 @@ describe("Templater", () => {
                     originalGetEnabledPluginById;
                 app.workspace.getActiveFile = originalGetActiveFile;
                 app.workspace.activeEditor = originalActiveEditor;
-                plugin.event_handler.update_trigger_file_on_creation =
-                    originalUpdateTrigger;
             }
         }, today);
 
         expect(result).toBe(yesterday);
-    });
-
-    it("does not process the same created file concurrently", async () => {
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.trigger_on_file_creation = false;
-            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
-        });
-        await resetVault("test/vault", {
-            "notes/new-note.md": '<% tp.date.now("YYYY-MM-DD") %>',
-        });
-
-        const overwriteCount = await browser.executeObsidian(async ({ app, plugins }) => {
-            const plugin = plugins.templaterObsidian;
-            const file = app.vault.getFileByPath("notes/new-note.md");
-            if (!file) {
-                throw new Error("Test note not found");
-            }
-
-            const originalOverwrite =
-                plugin.templater.overwrite_file_commands.bind(plugin.templater);
-            let calls = 0;
-
-            plugin.templater.overwrite_file_commands = (async (...args) => {
-                calls += 1;
-                return originalOverwrite(...args);
-            }) as typeof plugin.templater.overwrite_file_commands;
-
-            const TemplaterClass = plugin.templater.constructor as unknown as {
-                on_file_creation(
-                    templater: unknown,
-                    app: unknown,
-                    file: unknown,
-                ): Promise<void>;
-            };
-
-            try {
-                await Promise.all([
-                    TemplaterClass.on_file_creation(plugin.templater, app, file),
-                    TemplaterClass.on_file_creation(plugin.templater, app, file),
-                ]);
-                return calls;
-            } finally {
-                plugin.templater.overwrite_file_commands = originalOverwrite;
-            }
-        });
-
-        expect(overwriteCount).toBe(1);
     });
 
     it("append_template_to_active_file shows properties in live preview", async () => {
@@ -562,46 +477,6 @@ describe("Templater", () => {
         await OpenInsertTemplateModalPage.selectSuggestionByName("template");
         await WorkspacePage.waitForAllTemplatesExecuted();
         await VaultPage.expectFileToHaveContent("notes/target.md", expected);
-    });
-
-    async function testInvalidYamlFolderTemplate(templateContent: string) {
-        await resetVault("test/vault", {
-            "templates/template.md": templateContent,
-        });
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.trigger_on_file_creation = true;
-            plugins.templaterObsidian.settings.enable_folder_templates = true;
-            plugins.templaterObsidian.settings.folder_templates = [
-                { folder: "notes", template: "templates/template.md" },
-            ];
-            await plugins.templaterObsidian.save_settings();
-            plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
-        });
-        try {
-            await browser.executeObsidian(async ({ app }) => {
-                await app.vault.createFolder("notes");
-                await app.vault.create("notes/new-note.md", "");
-            });
-            await WorkspacePage.waitForAllTemplatesExecuted();
-            await VaultPage.expectFileToHaveContent(
-                "notes/new-note.md",
-                templateContent,
-            );
-        } finally {
-            await browser.executeObsidian(async ({ plugins }) => {
-                plugins.templaterObsidian.settings.trigger_on_file_creation = false;
-                await plugins.templaterObsidian.save_settings();
-                plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
-            });
-        }
-    }
-
-    it("write_template_to_file inserts template with invalid YAML % directive via folder template trigger", async () => {
-        await testInvalidYamlFolderTemplate("---\naliases:\n- %\n---\n");
-    });
-
-    it("write_template_to_file inserts template with invalid YAML # in flow sequence via folder template trigger", async () => {
-        await testInvalidYamlFolderTemplate("---\ntags: [#test]\n---\n");
     });
 
     async function testInvalidYamlAppendToActiveFile(

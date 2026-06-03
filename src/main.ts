@@ -34,7 +34,6 @@ export default class TemplaterPlugin extends Plugin {
         this.event_handler = new EventHandler(
             this,
             this.templater,
-            this.settings
         );
         await this.event_handler.setup();
 
@@ -47,11 +46,6 @@ export default class TemplaterPlugin extends Plugin {
         }).setAttribute("id", "rb-templater-icon");
 
         this.addSettingTab(new TemplaterSettingTab(this));
-
-        // Files might not be created yet
-        this.app.workspace.onLayoutReady(async () => {
-            await this.templater.execute_startup_scripts();
-        });
     }
 
     async onExternalSettingsChange() {

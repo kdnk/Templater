@@ -1,11 +1,8 @@
 import {
-    App,
-    getFrontMatterInfo,
     MarkdownPostProcessorContext,
     MarkdownView,
     normalizePath,
     stringifyYaml,
-    TAbstractFile,
     TFile,
     TFolder,
 } from "obsidian";
@@ -14,7 +11,6 @@ import {
     generate_dynamic_command_regex,
     get_active_file,
     get_folder_path_from_file_path,
-    resolve_tfile,
     get_frontmatter_and_content,
     merge_objects,
 } from "utils/Utils";
@@ -23,7 +19,7 @@ import {
     FunctionsGenerator,
     FunctionsMode,
 } from "./functions/FunctionsGenerator";
-import { errorWrapper, errorWrapperSync, TemplaterError } from "utils/Error";
+import { errorWrapper, TemplaterError } from "utils/Error";
 import { Parser } from "./parser/Parser";
 import { log_error } from "utils/Log";
 
@@ -33,7 +29,6 @@ export enum RunMode {
     OverwriteFile,
     OverwriteActiveFile,
     DynamicProcessor,
-    StartupTemplate,
 }
 
 export type RunningConfig = {
@@ -48,7 +43,6 @@ export class Templater {
     public functions_generator: FunctionsGenerator;
     public current_functions_object: Record<string, unknown>;
     public files_with_pending_templates: Set<string>;
-    public files_with_pending_file_creation: Set<string>;
 
     constructor(private plugin: TemplaterPlugin) {
         this.functions_generator = new FunctionsGenerator(this.plugin);
@@ -57,7 +51,6 @@ export class Templater {
 
     async setup(): Promise<void> {
         this.files_with_pending_templates = new Set();
-        this.files_with_pending_file_creation = new Set();
         await this.parser.init();
         await this.functions_generator.init();
         this.plugin.registerMarkdownPostProcessor((el, ctx) =>
@@ -503,164 +496,4 @@ export class Templater {
         }
     }
 
-    get_new_file_template_for_folder(folder: TFolder): string | undefined {
-        let current: TFolder | null = folder;
-        while (current instanceof TFolder) {
-            const f = current;
-            const match = this.plugin.settings.folder_templates.find(
-                (e) => e.folder == f.path,
-            );
-
-            if (match && match.template) {
-                return match.template;
-            }
-
-            current = current.parent;
-        }
-    }
-
-    get_new_file_template_for_file(file: TFile): string | undefined {
-        const match = this.plugin.settings.file_templates.find((e) => {
-            const eRegex = new RegExp(e.regex);
-            return eRegex.test(file.path);
-        });
-
-        if (match && match.template) {
-            return match.template;
-        }
-    }
-
-    static async on_file_creation(
-        templater: Templater,
-        app: App,
-        file: TAbstractFile,
-    ): Promise<void> {
-        if (!(file instanceof TFile) || file.extension !== "md") {
-            return;
-        }
-
-        // Avoids template replacement when syncing template files
-        const template_folder = normalizePath(
-            templater.plugin.settings.templates_folder,
-        );
-        if (file.path.includes(template_folder) && template_folder !== "/") {
-            return;
-        }
-
-        // Avoids template replacement in ignored folders
-        for (const ignore_folder of templater.plugin.settings
-            .ignore_folders_on_creation) {
-            const ignore_path = normalizePath(ignore_folder.folder);
-            if (file.path.startsWith(ignore_path) && ignore_path !== "") {
-                return;
-            }
-        }
-
-        if (templater.files_with_pending_file_creation.has(file.path)) {
-            return;
-        }
-        templater.files_with_pending_file_creation.add(file.path);
-
-        try {
-            // TODO: find a better way to do this
-            // Currently, I have to wait for the note extractor plugin to add the file content before replacing
-            await delay(300);
-
-            // Avoids template replacement when creating file from template without content before delay
-            if (templater.files_with_pending_templates.has(file.path)) {
-                return;
-            }
-
-            const file_content = await app.vault.read(file);
-            const frontmatter_info = getFrontMatterInfo(file_content);
-            const content_size =
-                file_content.length - frontmatter_info.contentStart;
-
-            if (
-                content_size == 0 &&
-                templater.plugin.settings.enable_folder_templates
-            ) {
-                if (!(file.parent instanceof TFolder)) {
-                    return;
-                }
-                const folder_template_match =
-                    templater.get_new_file_template_for_folder(file.parent);
-                if (!folder_template_match) {
-                    return;
-                }
-                const template_file: TFile = await errorWrapper(
-                    async (): Promise<TFile> => {
-                        return resolve_tfile(app, folder_template_match);
-                    },
-                    `Couldn't find template ${folder_template_match}`,
-                );
-                // errorWrapper failed
-                if (template_file == null) {
-                    return;
-                }
-                await templater.write_template_to_file(template_file, file);
-            } else {
-                if (
-                    content_size == 0 &&
-                    templater.plugin.settings.enable_file_templates
-                ) {
-                    const file_template_match =
-                        templater.get_new_file_template_for_file(file);
-                    if (!file_template_match) {
-                        return;
-                    }
-                    const template_file: TFile = await errorWrapper(
-                        async (): Promise<TFile> => {
-                            return resolve_tfile(app, file_template_match);
-                        },
-                        `Couldn't find template ${file_template_match}`,
-                    );
-                    // errorWrapper failed
-                    if (template_file == null) {
-                        return;
-                    }
-                    await templater.write_template_to_file(template_file, file);
-                } else {
-                    const SIZE_LIMIT = 100_000;
-                    if (file.stat.size <= SIZE_LIMIT) {
-                        //https://github.com/SilentVoid13/Templater/issues/873
-                        await templater.overwrite_file_commands(file);
-                    } else {
-                        console.debug(
-                            `Templater skipped parsing ${file.path} because file size exceeds ${SIZE_LIMIT}`,
-                        );
-                    }
-                }
-            }
-        } finally {
-            templater.files_with_pending_file_creation.delete(file.path);
-        }
-    }
-
-    async execute_startup_scripts(): Promise<void> {
-        for (const template of this.plugin.settings.startup_templates) {
-            if (!template) {
-                continue;
-            }
-            const file = errorWrapperSync(
-                () => resolve_tfile(this.plugin.app, template),
-                `Couldn't find startup template "${template}"`,
-            );
-            if (!file) {
-                continue;
-            }
-            const { path } = file;
-            this.start_templater_task(path);
-            const running_config = this.create_running_config(
-                file,
-                file,
-                RunMode.StartupTemplate,
-            );
-            await errorWrapper(
-                async () => this.read_and_parse_template(running_config),
-                `Startup Template parsing error, aborting.`,
-            );
-            await this.end_templater_task(path);
-        }
-    }
 }
