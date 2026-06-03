@@ -1,13 +1,17 @@
 import TemplaterPlugin from "main";
 import { PluginSettingTab, Setting } from "obsidian";
+import { FileSuggest, FileSuggestMode } from "./suggesters/FileSuggester";
+import { FolderSuggest } from "./suggesters/FolderSuggester";
 
 export const DEFAULT_SETTINGS: Settings = {
     command_timeout: 5,
+    templates_folder: "",
     daily_note_template: "",
 };
 
 export interface Settings {
     command_timeout: number;
+    templates_folder: string;
     daily_note_template: string;
 }
 
@@ -21,21 +25,46 @@ export class TemplaterSettingTab extends PluginSettingTab {
     display(): void {
         this.containerEl.empty();
 
+        this.add_template_folder_setting();
         this.add_daily_note_template_setting();
+    }
+
+    add_template_folder_setting(): void {
+        new Setting(this.containerEl)
+            .setName("Template folder location")
+            .setDesc("Files in this folder will be available as templates.")
+            .addSearch((cb) => {
+                new FolderSuggest(this.app, cb.inputEl);
+                cb.setPlaceholder("Example: folder1/folder2")
+                    .setValue(this.plugin.settings.templates_folder)
+                    .onChange(async (new_folder) => {
+                        new_folder = new_folder.trim();
+                        new_folder = new_folder.replace(/\/$/, "");
+
+                        this.plugin.settings.templates_folder = new_folder;
+                        await this.plugin.save_settings();
+                    });
+                cb.containerEl.addClass("templater_search");
+            });
     }
 
     add_daily_note_template_setting(): void {
         new Setting(this.containerEl)
             .setName("Daily note template")
             .setDesc("Template to apply to today's daily note on startup.")
-            .addText((cb) => {
-                cb.setPlaceholder("Example: templates/daily.md")
+            .addSearch((cb) => {
+                new FileSuggest(
+                    cb.inputEl,
+                    this.plugin,
+                    FileSuggestMode.TemplateFiles,
+                );
+                cb.setPlaceholder("Example: folder1/template_file")
                     .setValue(this.plugin.settings.daily_note_template)
                     .onChange(async (new_template) => {
-                        this.plugin.settings.daily_note_template =
-                            new_template.trim();
+                        this.plugin.settings.daily_note_template = new_template;
                         await this.plugin.save_settings();
                     });
+                cb.containerEl.addClass("templater_search");
             });
     }
 }

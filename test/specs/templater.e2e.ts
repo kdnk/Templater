@@ -270,4 +270,68 @@ describe("Templater", () => {
 
         expect(result).toBe(yesterday);
     });
+
+    it("processes today's daily note template from the template folder setting", async () => {
+        const today = moment().format("YYYY-MM-DD");
+        await resetVault("test/vault", {
+            "templates/daily.md": "legacy folder template",
+        });
+        await browser.executeObsidian(async ({ app }, currentDay: string) => {
+            await app.vault.createFolder("Daily Notes");
+            await app.vault.create(`Daily Notes/${currentDay}.md`, "");
+        }, today);
+
+        const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
+            const plugin = plugins.templaterObsidian;
+            const dailyFile = app.vault.getFileByPath(`Daily Notes/${currentDay}.md`);
+            if (!dailyFile) {
+                throw new Error("Daily note file not found");
+            }
+
+            const originalDailyNoteTemplate = plugin.settings.daily_note_template;
+            const originalTemplateFolder = plugin.settings.templates_folder;
+            const originalGetConfig = app.vault.getConfig.bind(app.vault);
+            const originalGetEnabledPluginById =
+                app.internalPlugins.getEnabledPluginById.bind(
+                    app.internalPlugins,
+                );
+
+            plugin.settings.daily_note_template = "daily.md";
+            plugin.settings.templates_folder = "templates";
+            app.vault.getConfig = ((key: string) => {
+                if (key === "openBehavior") {
+                    return "daily";
+                }
+                return originalGetConfig(key);
+            }) as typeof app.vault.getConfig;
+            app.internalPlugins.getEnabledPluginById = ((id: string) => {
+                if (id === "daily-notes") {
+                    return {
+                        options: {
+                            folder: "Daily Notes",
+                            format: "YYYY-MM-DD",
+                        },
+                    };
+                }
+                return originalGetEnabledPluginById(id);
+            }) as typeof app.internalPlugins.getEnabledPluginById;
+
+            try {
+                await (
+                    plugin.event_handler as unknown as {
+                        handle_layout_ready(): Promise<void>;
+                    }
+                ).handle_layout_ready();
+                return app.vault.read(dailyFile);
+            } finally {
+                plugin.settings.daily_note_template = originalDailyNoteTemplate;
+                plugin.settings.templates_folder = originalTemplateFolder;
+                app.vault.getConfig = originalGetConfig;
+                app.internalPlugins.getEnabledPluginById =
+                    originalGetEnabledPluginById;
+            }
+        }, today);
+
+        expect(result).toBe("legacy folder template");
+    });
 });
