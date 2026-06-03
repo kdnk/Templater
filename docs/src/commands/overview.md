@@ -14,5 +14,3 @@ The closing tag for a command is always the same: `%>`
 In addition to the different types of commands, you can also use command utilities. They are also declared in the opening tag of the command. All command utilities work with all command types. The available command utilities are:
 
 - [Whitespace Control](./whitespace-control.md)
-- [Dynamic Commands](./dynamic-command.md)
-

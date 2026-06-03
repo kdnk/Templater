@@ -21,6 +21,5 @@
     - [User Scripts](./user-functions/script-user-functions.md)
     - [System Commands](./user-functions/system-user-functions.md)
 - [Commands](./commands/overview.md)
-    - [Dynamic Commands](./commands/dynamic-command.md)
     - [Execution Commands](./commands/execution-command.md)
     - [Whitespace Control](./commands/whitespace-control.md)
