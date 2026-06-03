@@ -3,6 +3,7 @@ import { Templater } from "core/Templater";
 import {
     moment,
     normalizePath,
+    TFile,
 } from "obsidian";
 import { resolve_tfile } from "utils/Utils";
 import { errorWrapper } from "utils/Error";
@@ -73,7 +74,7 @@ export default class EventHandler {
 
         const template_file = await errorWrapper(
             async () =>
-                resolve_tfile(this.plugin.app, daily_note_template),
+                this.resolve_template_file(daily_note_template),
             `Couldn't find template ${daily_note_template}`,
         );
         if (!template_file) {
@@ -84,6 +85,22 @@ export default class EventHandler {
             template_file,
             daily_note_file,
         );
+    }
+
+    private resolve_template_file(template_path: string): TFile {
+        try {
+            return resolve_tfile(this.plugin.app, template_path);
+        } catch (error) {
+            const { templates_folder } = this.plugin.settings;
+            if (!templates_folder) {
+                throw error;
+            }
+
+            return resolve_tfile(
+                this.plugin.app,
+                normalizePath(`${templates_folder}/${template_path}`),
+            );
+        }
     }
 
 }
