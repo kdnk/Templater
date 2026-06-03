@@ -1,12 +1,8 @@
 import TemplaterPlugin from "main";
 import { Templater } from "core/Templater";
 import {
-    Menu,
-    MenuItem,
     moment,
     normalizePath,
-    TFile,
-    TFolder,
 } from "obsidian";
 import { resolve_tfile } from "utils/Utils";
 import { errorWrapper } from "utils/Error";
@@ -32,7 +28,6 @@ export default class EventHandler {
             });
         }
         await this.update_syntax_highlighting();
-        this.update_file_menu();
     }
 
     private remove_layout_ready_callbacks(): void {
@@ -105,24 +100,4 @@ export default class EventHandler {
         }
     }
 
-    update_file_menu(): void {
-        this.plugin.registerEvent(
-            this.plugin.app.workspace.on(
-                "file-menu",
-                (menu: Menu, file: TFile) => {
-                    if (file instanceof TFolder) {
-                        menu.addItem((item: MenuItem) => {
-                            item.setTitle("Create new note from template")
-                                .setIcon("templater-icon")
-                                .onClick(() => {
-                                    this.plugin.fuzzy_suggester.create_new_note_from_template(
-                                        file,
-                                    );
-                                });
-                        });
-                    }
-                },
-            ),
-        );
-    }
 }
