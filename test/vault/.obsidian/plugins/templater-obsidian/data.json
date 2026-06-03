@@ -1,14 +1,5 @@
 {
   "command_timeout": 5,
   "templates_folder": "templates",
-  "daily_note_template": "",
-  "templates_pairs": [
-    [
-      "",
-      ""
-    ]
-  ],
-  "enable_system_commands": false,
-  "shell_path": "",
-  "user_scripts_folder": "user scripts"
+  "daily_note_template": ""
 }

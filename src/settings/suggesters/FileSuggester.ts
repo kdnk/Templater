@@ -5,7 +5,6 @@ import { errorWrapperSync } from "utils/Error";
 
 export enum FileSuggestMode {
     TemplateFiles,
-    ScriptFiles,
 }
 
 export class FileSuggest extends AbstractInputSuggest<TFile> {
@@ -21,8 +20,6 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         switch (mode) {
             case FileSuggestMode.TemplateFiles:
                 return this.plugin.settings.templates_folder;
-            case FileSuggestMode.ScriptFiles:
-                return this.plugin.settings.user_scripts_folder;
         }
     }
 
@@ -30,8 +27,6 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         switch (mode) {
             case FileSuggestMode.TemplateFiles:
                 return `Templates folder doesn't exist`;
-            case FileSuggestMode.ScriptFiles:
-                return `User Scripts folder doesn't exist`;
         }
     }
 
