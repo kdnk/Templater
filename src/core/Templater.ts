@@ -1,5 +1,4 @@
 import {
-    MarkdownPostProcessorContext,
     MarkdownView,
     normalizePath,
     stringifyYaml,
@@ -8,7 +7,6 @@ import {
 } from "obsidian";
 import {
     delay,
-    generate_dynamic_command_regex,
     get_active_file,
     get_folder_path_from_file_path,
     get_frontmatter_and_content,
@@ -28,7 +26,6 @@ export enum RunMode {
     AppendActiveFile,
     OverwriteFile,
     OverwriteActiveFile,
-    DynamicProcessor,
 }
 
 export type RunningConfig = {
@@ -53,9 +50,6 @@ export class Templater {
         this.files_with_pending_templates = new Set();
         await this.parser.init();
         await this.functions_generator.init();
-        this.plugin.registerMarkdownPostProcessor((el, ctx) =>
-            this.process_dynamic_templates(el, ctx),
-        );
     }
 
     create_running_config(
@@ -403,80 +397,6 @@ export class Templater {
             content: output_content,
         });
         await this.end_templater_task(path);
-    }
-
-    async process_dynamic_templates(
-        el: HTMLElement,
-        ctx: MarkdownPostProcessorContext,
-    ): Promise<void> {
-        const dynamic_command_regex = generate_dynamic_command_regex();
-
-        const walker = activeDocument.createNodeIterator(
-            el,
-            NodeFilter.SHOW_TEXT,
-        );
-        let node;
-        let pass = false;
-        let functions_object: Record<string, unknown>;
-        while ((node = walker.nextNode())) {
-            let content = node.nodeValue;
-            if (content !== null) {
-                let match = dynamic_command_regex.exec(content);
-                if (match !== null) {
-                    const file =
-                        this.plugin.app.metadataCache.getFirstLinkpathDest(
-                            "",
-                            ctx.sourcePath,
-                        );
-                    if (!file || !(file instanceof TFile)) {
-                        return;
-                    }
-                    if (!pass) {
-                        pass = true;
-                        const config = this.create_running_config(
-                            file,
-                            file,
-                            RunMode.DynamicProcessor,
-                        );
-                        functions_object =
-                            await this.functions_generator.generate_object(
-                                config,
-                                FunctionsMode.USER_INTERNAL,
-                            );
-                        this.current_functions_object = functions_object;
-                    }
-                }
-
-                while (match != null) {
-                    // Not the most efficient way to exclude the '+' from the command but I couldn't find something better
-                    const complete_command = match[1] + match[2];
-                    const command_output: string = await errorWrapper(
-                        async () => {
-                            return await this.parser.parse_commands(
-                                complete_command,
-                                functions_object,
-                            );
-                        },
-                        `Command Parsing error in dynamic command '${complete_command}'`,
-                    );
-                    if (command_output == null) {
-                        return;
-                    }
-                    const start =
-                        dynamic_command_regex.lastIndex - match[0].length;
-                    const end = dynamic_command_regex.lastIndex;
-                    content =
-                        content.substring(0, start) +
-                        command_output +
-                        content.substring(end);
-
-                    dynamic_command_regex.lastIndex +=
-                        command_output.length - match[0].length;
-                    match = dynamic_command_regex.exec(content);
-                }
-                node.nodeValue = content;
-            }
-        }
     }
 
 }
