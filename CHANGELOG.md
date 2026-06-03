@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.2](https://github.com/kdnk/Templater/compare/4.0.1...4.0.2) (2026-06-03)
+
+
+### Code Refactoring
+
+* **event-handler:** remove general file creation runtime ([4a3e842](https://github.com/kdnk/Templater/commit/4a3e842))
+
 ### [4.0.1](https://github.com/kdnk/Templater/compare/4.0.0...4.0.1) (2026-06-03)
 
 
