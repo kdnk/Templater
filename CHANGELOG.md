@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.9](https://github.com/kdnk/Templater/compare/4.0.8...4.0.9) (2026-06-03)
+
+
+### Bug Fixes
+
+* **settings:** restore template folder resolution ([00099cd](https://github.com/kdnk/Templater/commit/00099cd))
+
 ### [4.0.8](https://github.com/kdnk/Templater/compare/4.0.7...4.0.8) (2026-06-03)
 
 
