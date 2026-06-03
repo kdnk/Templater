@@ -100,11 +100,6 @@ export default class EventHandler {
             return null;
         }
 
-        const open_behavior = this.plugin.app.vault.getConfig("openBehavior");
-        if (open_behavior !== "daily") {
-            return null;
-        }
-
         const daily_notes_plugin =
             this.plugin.app.internalPlugins.getEnabledPluginById(
                 "daily-notes",

@@ -394,4 +394,64 @@ describe("Templater", () => {
 
         expect(result).toBe("created after setup");
     });
+
+    it("processes today's daily note template when Daily Notes creates it without startup open behavior", async () => {
+        const today = moment().format("YYYY-MM-DD");
+        await resetVault("test/vault", {
+            "templates/daily.md": "created by daily notes command",
+        });
+        await browser.executeObsidian(async ({ app }) => {
+            await app.vault.createFolder("Daily Notes");
+        });
+
+        const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
+            const plugin = plugins.templaterObsidian;
+
+            const originalDailyNoteTemplate = plugin.settings.daily_note_template;
+            const originalTemplateFolder = plugin.settings.templates_folder;
+            const originalGetConfig = app.vault.getConfig.bind(app.vault);
+            const originalGetEnabledPluginById =
+                app.internalPlugins.getEnabledPluginById.bind(
+                    app.internalPlugins,
+                );
+
+            plugin.settings.daily_note_template = "daily.md";
+            plugin.settings.templates_folder = "templates";
+            app.vault.getConfig = ((key: string) => {
+                if (key === "openBehavior") {
+                    return "last";
+                }
+                return originalGetConfig(key);
+            }) as typeof app.vault.getConfig;
+            app.internalPlugins.getEnabledPluginById = ((id: string) => {
+                if (id === "daily-notes") {
+                    return {
+                        options: {
+                            folder: "Daily Notes",
+                            format: "YYYY-MM-DD",
+                        },
+                    };
+                }
+                return originalGetEnabledPluginById(id);
+            }) as typeof app.internalPlugins.getEnabledPluginById;
+
+            try {
+                await plugin.event_handler.setup();
+                const dailyFile = await app.vault.create(
+                    `Daily Notes/${currentDay}.md`,
+                    "",
+                );
+                await new Promise((resolve) => activeWindow.setTimeout(resolve, 250));
+                return app.vault.read(dailyFile);
+            } finally {
+                plugin.settings.daily_note_template = originalDailyNoteTemplate;
+                plugin.settings.templates_folder = originalTemplateFolder;
+                app.vault.getConfig = originalGetConfig;
+                app.internalPlugins.getEnabledPluginById =
+                    originalGetEnabledPluginById;
+            }
+        }, today);
+
+        expect(result).toBe("created by daily notes command");
+    });
 });
