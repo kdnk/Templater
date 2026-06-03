@@ -1,20 +1,27 @@
 import TemplaterPlugin from "main";
 import { Templater } from "core/Templater";
 import {
+    EventRef,
     moment,
     normalizePath,
+    TAbstractFile,
     TFile,
 } from "obsidian";
 import { resolve_tfile } from "utils/Utils";
 import { errorWrapper } from "utils/Error";
 
 export default class EventHandler {
+    private daily_note_creation_event: EventRef | undefined;
+    private processed_daily_note_keys = new Set<string>();
+
     constructor(
         private plugin: TemplaterPlugin,
         private templater: Templater,
     ) {}
 
     async setup(): Promise<void> {
+        this.register_daily_note_creation_listener();
+
         if (Array.isArray(this.plugin.app.workspace.onLayoutReadyCallbacks)) {
             this.remove_layout_ready_callbacks();
             this.plugin.app.workspace.onLayoutReadyCallbacks.unshift({
@@ -44,14 +51,58 @@ export default class EventHandler {
     }
 
     private async handle_layout_ready(): Promise<void> {
+        const daily_note_path = this.get_todays_daily_note_path();
+        if (!daily_note_path) {
+            return;
+        }
+
+        const daily_note_file =
+            this.plugin.app.vault.getFileByPath(daily_note_path);
+        if (!daily_note_file) {
+            return;
+        }
+
+        await this.process_daily_note_file(daily_note_file);
+    }
+
+    private register_daily_note_creation_listener(): void {
+        if (this.daily_note_creation_event) {
+            return;
+        }
+
+        this.daily_note_creation_event = this.plugin.app.vault.on(
+            "create",
+            (file: TAbstractFile) => {
+                void this.handle_daily_note_creation(file);
+            },
+        );
+        this.plugin.registerEvent(this.daily_note_creation_event);
+    }
+
+    private async handle_daily_note_creation(
+        file: TAbstractFile,
+    ): Promise<void> {
+        if (!(file instanceof TFile)) {
+            return;
+        }
+
+        const daily_note_path = this.get_todays_daily_note_path();
+        if (daily_note_path !== file.path) {
+            return;
+        }
+
+        await this.process_daily_note_file(file);
+    }
+
+    private get_todays_daily_note_path(): string | null {
         const { daily_note_template } = this.plugin.settings;
         if (!daily_note_template) {
-            return;
+            return null;
         }
 
         const open_behavior = this.plugin.app.vault.getConfig("openBehavior");
         if (open_behavior !== "daily") {
-            return;
+            return null;
         }
 
         const daily_notes_plugin =
@@ -59,19 +110,22 @@ export default class EventHandler {
                 "daily-notes",
             );
         if (!daily_notes_plugin) {
-            return;
+            return null;
         }
 
         const { folder, format } = daily_notes_plugin.options;
-        const daily_note_path = normalizePath(
+        return normalizePath(
             `${folder}/${moment().format(format)}.md`,
         );
-        const daily_note_file =
-            this.plugin.app.vault.getFileByPath(daily_note_path);
-        if (!daily_note_file) {
+    }
+
+    private async process_daily_note_file(daily_note_file: TFile): Promise<void> {
+        const daily_note_key = `${daily_note_file.path}:${daily_note_file.stat.ctime}`;
+        if (this.processed_daily_note_keys.has(daily_note_key)) {
             return;
         }
 
+        const { daily_note_template } = this.plugin.settings;
         const template_file = await errorWrapper(
             async () =>
                 this.resolve_template_file(daily_note_template),
@@ -81,6 +135,7 @@ export default class EventHandler {
             return;
         }
 
+        this.processed_daily_note_keys.add(daily_note_key);
         await this.templater.write_template_to_file(
             template_file,
             daily_note_file,
