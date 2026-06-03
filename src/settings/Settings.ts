@@ -2,22 +2,15 @@ import TemplaterPlugin from "main";
 import { PluginSettingTab, Setting } from "obsidian";
 import { FileSuggest, FileSuggestMode } from "./suggesters/FileSuggester";
 import { FolderSuggest } from "./suggesters/FolderSuggester";
-import { IntellisenseRenderOption } from "./RenderSettings/IntellisenseRenderOption";
 
 export const DEFAULT_SETTINGS: Settings = {
     command_timeout: 5,
     templates_folder: "",
     daily_note_template: "",
     templates_pairs: [["", ""]],
-    auto_jump_to_cursor: false,
     enable_system_commands: false,
     shell_path: "",
     user_scripts_folder: "",
-    syntax_highlighting: true,
-    syntax_highlighting_mobile: false,
-    enabled_templates_hotkeys: [""],
-    intellisense_render:
-        IntellisenseRenderOption.RenderDescriptionParameterReturn,
 };
 
 export interface Settings {
@@ -25,14 +18,9 @@ export interface Settings {
     templates_folder: string;
     daily_note_template: string;
     templates_pairs: Array<[string, string]>;
-    auto_jump_to_cursor: boolean;
     enable_system_commands: boolean;
     shell_path: string;
     user_scripts_folder: string;
-    syntax_highlighting: boolean;
-    syntax_highlighting_mobile: boolean;
-    enabled_templates_hotkeys: Array<string>;
-    intellisense_render: number;
 }
 
 export class TemplaterSettingTab extends PluginSettingTab {

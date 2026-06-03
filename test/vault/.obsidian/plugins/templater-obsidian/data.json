@@ -8,12 +8,7 @@
       ""
     ]
   ],
-  "auto_jump_to_cursor": false,
   "enable_system_commands": false,
   "shell_path": "",
-  "user_scripts_folder": "user scripts",
-  "syntax_highlighting": true,
-  "syntax_highlighting_mobile": true,
-  "enabled_templates_hotkeys": [],
-  "intellisense_render": 1
+  "user_scripts_folder": "user scripts"
 }

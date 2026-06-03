@@ -27,7 +27,6 @@ export default class EventHandler {
                 void this.handle_layout_ready();
             });
         }
-        await this.update_syntax_highlighting();
     }
 
     private remove_layout_ready_callbacks(): void {
@@ -85,19 +84,6 @@ export default class EventHandler {
             template_file,
             daily_note_file,
         );
-    }
-
-    async update_syntax_highlighting(): Promise<void> {
-        const desktopShouldHighlight =
-            this.plugin.editor_handler.desktopShouldHighlight();
-        const mobileShouldHighlight =
-            this.plugin.editor_handler.mobileShouldHighlight();
-
-        if (desktopShouldHighlight || mobileShouldHighlight) {
-            await this.plugin.editor_handler.enable_highlighter();
-        } else {
-            await this.plugin.editor_handler.disable_highlighter();
-        }
     }
 
 }

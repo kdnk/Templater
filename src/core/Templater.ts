@@ -219,11 +219,6 @@ export class Templater {
                 state: { mode: "source" },
             });
 
-            await this.plugin.editor_handler.jump_to_next_cursor_location(
-                created_note,
-                true,
-            );
-
             active_leaf.setEphemeralState({
                 rename: "all",
             });
@@ -291,10 +286,6 @@ export class Templater {
             newSelections: doc.listSelections(),
         });
 
-        await this.plugin.editor_handler.jump_to_next_cursor_location(
-            active_editor.file,
-            true,
-        );
         await this.end_templater_task(path);
     }
 
@@ -370,10 +361,6 @@ export class Templater {
             file,
             content: output_content,
         });
-        await this.plugin.editor_handler.jump_to_next_cursor_location(
-            file,
-            true,
-        );
         await this.end_templater_task(path);
     }
 
@@ -415,10 +402,6 @@ export class Templater {
             file,
             content: output_content,
         });
-        await this.plugin.editor_handler.jump_to_next_cursor_location(
-            file,
-            true,
-        );
         await this.end_templater_task(path);
     }
 

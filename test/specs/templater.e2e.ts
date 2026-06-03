@@ -13,14 +13,10 @@ describe("Templater", () => {
             const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
                 app.workspace,
             );
-            const originalUpdateSyntax =
-                plugin.event_handler.update_syntax_highlighting;
-
             app.workspace.onLayoutReadyCallbacks = callbacks;
             app.workspace.onLayoutReady = (() => {
                 onLayoutReadyCalled = true;
             }) as typeof app.workspace.onLayoutReady;
-            plugin.event_handler.update_syntax_highlighting = async () => {};
 
             try {
                 await plugin.event_handler.setup();
@@ -32,8 +28,6 @@ describe("Templater", () => {
             } finally {
                 app.workspace.onLayoutReadyCallbacks = originalCallbacks;
                 app.workspace.onLayoutReady = originalOnLayoutReady;
-                plugin.event_handler.update_syntax_highlighting =
-                    originalUpdateSyntax;
             }
         });
 
@@ -67,12 +61,8 @@ describe("Templater", () => {
             const originalOnLayoutReady = app.workspace.onLayoutReady.bind(
                 app.workspace,
             );
-            const originalUpdateSyntax =
-                plugin.event_handler.update_syntax_highlighting;
-
             app.workspace.onLayoutReadyCallbacks = callbacks;
             app.workspace.onLayoutReady = (() => {}) as typeof app.workspace.onLayoutReady;
-            plugin.event_handler.update_syntax_highlighting = async () => {};
 
             try {
                 await plugin.event_handler.setup();
@@ -86,8 +76,6 @@ describe("Templater", () => {
             } finally {
                 app.workspace.onLayoutReadyCallbacks = originalCallbacks;
                 app.workspace.onLayoutReady = originalOnLayoutReady;
-                plugin.event_handler.update_syntax_highlighting =
-                    originalUpdateSyntax;
             }
         });
 
@@ -108,8 +96,6 @@ describe("Templater", () => {
                 app.workspace,
             );
             const originalVaultOn = app.vault.on.bind(app.vault);
-            const originalUpdateSyntax =
-                plugin.event_handler.update_syntax_highlighting;
             const originalRegisterEvent = plugin.registerEvent.bind(plugin);
 
             app.workspace.onLayoutReadyCallbacks = undefined;
@@ -122,7 +108,6 @@ describe("Templater", () => {
                 }
                 return originalVaultOn(name as "create", callback as never);
             }) as typeof app.vault.on;
-            plugin.event_handler.update_syntax_highlighting = async () => {};
             plugin.registerEvent = (() => {}) as typeof plugin.registerEvent;
 
             try {
@@ -135,8 +120,6 @@ describe("Templater", () => {
                 app.workspace.onLayoutReadyCallbacks = originalCallbacks;
                 app.workspace.onLayoutReady = originalOnLayoutReady;
                 app.vault.on = originalVaultOn;
-                plugin.event_handler.update_syntax_highlighting =
-                    originalUpdateSyntax;
                 plugin.registerEvent = originalRegisterEvent;
             }
         });
