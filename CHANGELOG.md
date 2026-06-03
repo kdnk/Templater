@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.5](https://github.com/kdnk/Templater/compare/4.0.4...4.0.5) (2026-06-03)
+
+
+### Code Refactoring
+
+* **runtime:** remove dynamic preview processor ([f623ecc](https://github.com/kdnk/Templater/commit/f623ecc))
+
 ### [4.0.4](https://github.com/kdnk/Templater/compare/4.0.3...4.0.4) (2026-06-03)
 
 
