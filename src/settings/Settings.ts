@@ -24,6 +24,7 @@ export interface IgnoreFolderOnCreation {
 export const DEFAULT_SETTINGS: Settings = {
     command_timeout: 5,
     templates_folder: "",
+    daily_note_template: "",
     templates_pairs: [["", ""]],
     trigger_on_file_creation: false,
     auto_jump_to_cursor: false,
@@ -46,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface Settings {
     command_timeout: number;
     templates_folder: string;
+    daily_note_template: string;
     templates_pairs: Array<[string, string]>;
     trigger_on_file_creation: boolean;
     auto_jump_to_cursor: boolean;
@@ -75,19 +77,7 @@ export class TemplaterSettingTab extends PluginSettingTab {
         this.containerEl.empty();
 
         this.add_template_folder_setting();
-        this.add_internal_functions_setting();
-        this.add_syntax_highlighting_settings();
-        this.add_auto_jump_to_cursor();
-        this.add_trigger_on_new_file_creation_setting();
-        if (this.plugin.settings.trigger_on_file_creation) {
-            this.add_ignore_folders_on_creation_setting();
-            this.add_folder_templates_setting();
-            this.add_file_templates_setting();
-        }
-        this.add_templates_hotkeys_setting();
-        this.add_startup_templates_setting();
-        this.add_user_script_functions_setting();
-        this.add_user_system_command_functions_setting();
+        this.add_daily_note_template_setting();
     }
 
     add_template_folder_setting(): void {
@@ -104,6 +94,26 @@ export class TemplaterSettingTab extends PluginSettingTab {
                         new_folder = new_folder.replace(/\/$/, "");
 
                         this.plugin.settings.templates_folder = new_folder;
+                        await this.plugin.save_settings();
+                    });
+                cb.containerEl.addClass("templater_search");
+            });
+    }
+
+    add_daily_note_template_setting(): void {
+        new Setting(this.containerEl)
+            .setName("Daily note template")
+            .setDesc("Template to apply to today's daily note on startup.")
+            .addSearch((cb) => {
+                new FileSuggest(
+                    cb.inputEl,
+                    this.plugin,
+                    FileSuggestMode.TemplateFiles,
+                );
+                cb.setPlaceholder("Example: folder1/template_file")
+                    .setValue(this.plugin.settings.daily_note_template)
+                    .onChange(async (new_template) => {
+                        this.plugin.settings.daily_note_template = new_template;
                         await this.plugin.save_settings();
                     });
                 cb.containerEl.addClass("templater_search");

@@ -182,15 +182,19 @@ describe("Templater", () => {
         });
     });
 
-    it("processes today's daily note on layout ready even when no active file is available", async () => {
+    it("processes today's daily note template on layout ready even when no active file is available", async () => {
         const today = moment().format("YYYY-MM-DD");
         await browser.executeObsidian(async ({ plugins }) => {
             plugins.templaterObsidian.settings.trigger_on_file_creation = false;
             plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
         });
         await resetVault("test/vault", {
-            [`Daily Notes/${today}.md`]: '<% tp.date.now("YYYY-MM-DD") %>',
+            "templates/daily.md": '<% tp.date.now("YYYY-MM-DD") %>',
         });
+        await browser.executeObsidian(async ({ app }, currentDay: string) => {
+            await app.vault.createFolder("Daily Notes");
+            await app.vault.create(`Daily Notes/${currentDay}.md`, "");
+        }, today);
 
         const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
             const plugin = plugins.templaterObsidian;
@@ -199,8 +203,7 @@ describe("Templater", () => {
                 throw new Error("Daily note file not found");
             }
 
-            const originalTriggerOnFileCreation =
-                plugin.settings.trigger_on_file_creation;
+            const originalDailyNoteTemplate = plugin.settings.daily_note_template;
             const originalGetConfig = app.vault.getConfig.bind(app.vault);
             const originalGetEnabledPluginById =
                 app.internalPlugins.getEnabledPluginById.bind(
@@ -213,7 +216,7 @@ describe("Templater", () => {
             const originalUpdateTrigger =
                 plugin.event_handler.update_trigger_file_on_creation;
 
-            plugin.settings.trigger_on_file_creation = true;
+            plugin.settings.daily_note_template = "templates/daily.md";
             app.vault.getConfig = ((key: string) => {
                 if (key === "openBehavior") {
                     return "daily";
@@ -243,8 +246,7 @@ describe("Templater", () => {
                 ).handle_layout_ready();
                 return app.vault.read(dailyFile);
             } finally {
-                plugin.settings.trigger_on_file_creation =
-                    originalTriggerOnFileCreation;
+                plugin.settings.daily_note_template = originalDailyNoteTemplate;
                 app.vault.getConfig = originalGetConfig;
                 app.internalPlugins.getEnabledPluginById =
                     originalGetEnabledPluginById;
@@ -258,7 +260,7 @@ describe("Templater", () => {
         expect(result).toBe(today);
     });
 
-    it("processes today's daily note on layout ready using the daily note as target file", async () => {
+    it("processes today's daily note template on layout ready using the daily note as target file", async () => {
         const today = moment().format("YYYY-MM-DD");
         const yesterday = moment().add(-1, "days").format("YYYY-MM-DD");
         await browser.executeObsidian(async ({ plugins }) => {
@@ -266,10 +268,13 @@ describe("Templater", () => {
             plugins.templaterObsidian.event_handler.update_trigger_file_on_creation();
         });
         await resetVault("test/vault", {
-            [`Daily Notes/${today}.md`]:
-                '<% tp.date.now("YYYY-MM-DD", -1, tp.file.title, "YYYY-MM-DD") %>',
+            "templates/daily.md": "<% tp.date.yesterday() %>",
             "notes/active.md": "active note",
         });
+        await browser.executeObsidian(async ({ app }, currentDay: string) => {
+            await app.vault.createFolder("Daily Notes");
+            await app.vault.create(`Daily Notes/${currentDay}.md`, "");
+        }, today);
 
         const result = await browser.executeObsidian(async ({ app, plugins }, currentDay: string) => {
             const plugin = plugins.templaterObsidian;
@@ -279,8 +284,7 @@ describe("Templater", () => {
                 throw new Error("Test files not found");
             }
 
-            const originalTriggerOnFileCreation =
-                plugin.settings.trigger_on_file_creation;
+            const originalDailyNoteTemplate = plugin.settings.daily_note_template;
             const originalGetConfig = app.vault.getConfig.bind(app.vault);
             const originalGetEnabledPluginById =
                 app.internalPlugins.getEnabledPluginById.bind(
@@ -293,7 +297,7 @@ describe("Templater", () => {
             const originalUpdateTrigger =
                 plugin.event_handler.update_trigger_file_on_creation;
 
-            plugin.settings.trigger_on_file_creation = true;
+            plugin.settings.daily_note_template = "templates/daily.md";
             app.vault.getConfig = ((key: string) => {
                 if (key === "openBehavior") {
                     return "daily";
@@ -323,8 +327,7 @@ describe("Templater", () => {
                 ).handle_layout_ready();
                 return app.vault.read(dailyFile);
             } finally {
-                plugin.settings.trigger_on_file_creation =
-                    originalTriggerOnFileCreation;
+                plugin.settings.daily_note_template = originalDailyNoteTemplate;
                 app.vault.getConfig = originalGetConfig;
                 app.internalPlugins.getEnabledPluginById =
                     originalGetEnabledPluginById;

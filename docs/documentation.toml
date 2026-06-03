@@ -112,7 +112,7 @@ example = """<% tp.date.tomorrow("Do MMMM YYYY") %>"""
 
 [tp.date.functions.yesterday]
 name = "yesterday"
-description = "Retrieves yesterday's date."
+description = "Retrieves yesterday's date. In a daily note named `YYYY-MM-DD`, this uses the note title as the reference date."
 definition = "tp.date.yesterday(format: string = \"YYYY-MM-DD\")"
 
 [[tp.date.functions.yesterday.args]]
@@ -736,5 +736,4 @@ example = """<% await tp.web.request("https://jsonplaceholder.typicode.com/todos
 [[tp.web.functions.request.examples]]
 name = "Request with path"
 example = """<% await tp.web.request("https://jsonplaceholder.typicode.com/todos", "0.title") %>"""
-
 
