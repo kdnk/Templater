@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.0.0](https://github.com/kdnk/Templater/compare/3.1.5...4.0.0) (2026-06-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* The settings UI no longer exposes general template automation settings such as folder templates, file regex templates, startup templates, hotkeys, script functions, system commands, syntax highlighting, or automatic cursor jumping.
+
+### Features
+
+* focus Templater on daily notes ([79b348b](https://github.com/kdnk/Templater/commit/79b348b))
+
+### Documentation
+
+* clarify repository operation target ([96ffeac](https://github.com/kdnk/Templater/commit/96ffeac))
+* document GitButler workflow ([3bdd65d](https://github.com/kdnk/Templater/commit/3bdd65d))
+
 ### [3.1.5](https://github.com/kdnk/Templater/compare/3.1.4...3.1.5) (2026-06-02)
 
 
