@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.11](https://github.com/kdnk/Templater/compare/4.0.10...4.0.11) (2026-06-03)
+
+
+### Bug Fixes
+
+* **event-handler:** remove startup-open gate for daily notes ([77d2d15](https://github.com/kdnk/Templater/commit/77d2d15))
+
 ### [4.0.10](https://github.com/kdnk/Templater/compare/4.0.9...4.0.10) (2026-06-03)
 
 
