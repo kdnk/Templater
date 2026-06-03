@@ -1,7 +1,7 @@
 {
     "id": "templater-obsidian",
     "name": "Templater",
-    "version": "4.0.5",
+    "version": "4.0.6",
     "description": "Advanced templating and automation using handlebars-like syntax.",
     "minAppVersion": "1.12.2",
     "author": "SilentVoid",
