@@ -78,7 +78,15 @@ export class InternalModuleDate extends InternalModule {
 
     generate_yesterday(): (format?: string) => string {
         return (format = "YYYY-MM-DD") => {
-            return moment().add(-1, "days").format(format);
+            const target_file_date = moment(
+                this.config?.target_file.basename,
+                "YYYY-MM-DD",
+                true,
+            );
+            const reference_date = target_file_date.isValid()
+                ? target_file_date
+                : moment();
+            return reference_date.add(-1, "days").format(format);
         };
     }
 }
