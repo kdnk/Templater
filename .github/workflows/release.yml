@@ -52,6 +52,12 @@ jobs:
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
 
-                  gh release create "$tag" \
-                    --title="$tag" \
-                    main.js manifest.json styles.css templater-obsidian.zip
+                  if gh release view "$tag" >/dev/null 2>&1; then
+                    gh release upload "$tag" \
+                      --clobber \
+                      main.js manifest.json styles.css templater-obsidian.zip
+                  else
+                    gh release create "$tag" \
+                      --title="$tag" \
+                      main.js manifest.json styles.css templater-obsidian.zip
+                  fi
