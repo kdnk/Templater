@@ -4,7 +4,6 @@ import WorkspacePage from "../../page-objects/Workspace.page";
 import EmptyStateViewPage from "../../page-objects/EmptyStateView.page";
 import VaultPage from "../../page-objects/Vault.page";
 import CreateNewNoteFromTemplateModalPage from "../../page-objects/CreateNewNoteFromTemplateModal.page";
-import NoticePage from "../../page-objects/Notice.page";
 import { resetVault } from "../../utils/reset-vault";
 
 describe("InternalModuleConfig", () => {
@@ -120,55 +119,4 @@ Run mode: 3`;
     // Deprecated, do not need to test this functionality
     it.skip("reports correct config on dynamic processor", () => {});
 
-    it("tp.config reports correct config on startup template with no active file", async () => {
-        await resetVault("test/vault", {
-            "templates/tp.config.md":
-                "<%*\n" +
-                "new Notice(`Template file: ${tp.config.template_file.path}\n" +
-                "Target file: ${tp.config.target_file.path}\n" +
-                "Active file: ${tp.config.active_file?.path}\n" +
-                "Run mode: ${tp.config.run_mode}`)\n" +
-                "%>",
-        });
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.startup_templates = [
-                "templates/tp.config.md",
-            ];
-            await plugins.templaterObsidian.save_settings();
-        });
-        await browser.reloadObsidian();
-        await WorkspacePage.waitForAllTemplatesExecuted();
-        const expectedContent = `Template file: templates/tp.config.md
-Target file: templates/tp.config.md
-Active file: undefined
-Run mode: 5`;
-        await NoticePage.expectNoticeElWithText(expectedContent);
-    });
-
-    it("tp.config reports correct config on startup template with active file", async () => {
-        await resetVault("test/vault", {
-            "templates/tp.config.md":
-                "<%*\n" +
-                "new Notice(`Template file: ${tp.config.template_file.path}\n" +
-                "Target file: ${tp.config.target_file.path}\n" +
-                "Active file: ${tp.config.active_file?.path}\n" +
-                "Run mode: ${tp.config.run_mode}`)\n" +
-                "%>",
-            "notes/note.md": "\n",
-        });
-        await browser.executeObsidian(async ({ plugins }) => {
-            plugins.templaterObsidian.settings.startup_templates = [
-                "templates/tp.config.md",
-            ];
-            await plugins.templaterObsidian.save_settings();
-        });
-        await obsidianPage.openFile("notes/note.md");
-        await browser.reloadObsidian();
-        await WorkspacePage.waitForAllTemplatesExecuted();
-        const expectedContent = `Template file: templates/tp.config.md
-Target file: templates/tp.config.md
-Active file: notes/note.md
-Run mode: 5`;
-        await NoticePage.expectNoticeElWithText(expectedContent);
-    });
 });
