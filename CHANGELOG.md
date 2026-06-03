@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.7](https://github.com/kdnk/Templater/compare/4.0.6...4.0.7) (2026-06-03)
+
+
+### Code Refactoring
+
+* **deps:** remove unused user documentation dependencies ([061b66f](https://github.com/kdnk/Templater/commit/061b66f))
+
 ### [4.0.6](https://github.com/kdnk/Templater/compare/4.0.5...4.0.6) (2026-06-03)
 
 
