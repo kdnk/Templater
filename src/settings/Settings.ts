@@ -7,20 +7,12 @@ export const DEFAULT_SETTINGS: Settings = {
     command_timeout: 5,
     templates_folder: "",
     daily_note_template: "",
-    templates_pairs: [["", ""]],
-    enable_system_commands: false,
-    shell_path: "",
-    user_scripts_folder: "",
 };
 
 export interface Settings {
     command_timeout: number;
     templates_folder: string;
     daily_note_template: string;
-    templates_pairs: Array<[string, string]>;
-    enable_system_commands: boolean;
-    shell_path: string;
-    user_scripts_folder: string;
 }
 
 export class TemplaterSettingTab extends PluginSettingTab {
