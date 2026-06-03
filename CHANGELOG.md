@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.4](https://github.com/kdnk/Templater/compare/4.0.3...4.0.4) (2026-06-03)
+
+
+### Code Refactoring
+
+* **editor:** remove template authoring assists ([9892ecf](https://github.com/kdnk/Templater/commit/9892ecf))
+
 ### [4.0.3](https://github.com/kdnk/Templater/compare/4.0.2...4.0.3) (2026-06-03)
 
 
