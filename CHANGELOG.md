@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.10](https://github.com/kdnk/Templater/compare/4.0.9...4.0.10) (2026-06-03)
+
+
+### Bug Fixes
+
+* **event-handler:** process daily note creation race ([a645d04](https://github.com/kdnk/Templater/commit/a645d04))
+
 ### [4.0.9](https://github.com/kdnk/Templater/compare/4.0.8...4.0.9) (2026-06-03)
 
 
